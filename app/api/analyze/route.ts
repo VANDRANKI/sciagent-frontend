@@ -3,15 +3,15 @@ import { NextRequest } from "next/server";
 const HF_SPACE_URL = process.env.HF_SPACE_URL;
 
 /**
- * Proxies the analysis request to the HuggingFace Gradio backend.
+ * Proxies the analysis request to the HuggingFace Gradio 5 backend.
  *
- * Because the Gradio backend is synchronous (demo.launch()), we:
- * 1. Upload the PDF to Gradio's /upload endpoint.
- * 2. Stream fake SSE status events so the frontend pipeline shows progress.
- * 3. Call /run/analyze and wait for the result.
- * 4. Stream the final answer as an SSE event.
+ * Gradio 5 API (3 steps):
+ * 1. Upload the PDF to /gradio_api/upload
+ * 2. Call /gradio_api/call/analyze to get an event_id (returns immediately)
+ * 3. Poll /gradio_api/call/analyze/{event_id} for the SSE result stream
  *
- * This keeps the frontend SSE interface completely unchanged.
+ * Fake SSE status events are streamed to the frontend during processing
+ * so the agent pipeline shows progress.
  */
 export async function POST(request: NextRequest) {
   if (!HF_SPACE_URL) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         let uploadedPaths: string[];
         try {
-          const uploadRes = await fetch(`${HF_SPACE_URL}/upload`, {
+          const uploadRes = await fetch(`${HF_SPACE_URL}/gradio_api/upload`, {
             method: "POST",
             body: uploadForm,
           });
@@ -101,7 +101,45 @@ export async function POST(request: NextRequest) {
           done: false,
         });
 
-        // Stream status events for all pipeline stages while the Gradio call runs
+        // Step 2: Kick off the Gradio 5 call - returns an event_id immediately
+        let eventId: string;
+        try {
+          const callRes = await fetch(
+            `${HF_SPACE_URL}/gradio_api/call/analyze`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                data: [
+                  { path: pdfPath, orig_name: pdf.name, size: pdf.size },
+                  question,
+                ],
+              }),
+            }
+          );
+
+          if (!callRes.ok) {
+            throw new Error(
+              `Analysis backend returned status ${callRes.status}.`
+            );
+          }
+
+          const callResult = await callRes.json();
+          eventId = callResult.event_id;
+          if (!eventId) {
+            throw new Error("No event_id returned from backend.");
+          }
+        } catch (err) {
+          send({
+            type: "error",
+            message:
+              err instanceof Error ? err.message : "Analysis request failed.",
+          });
+          controller.close();
+          return;
+        }
+
+        // Stream fake status events while the backend processes in the background
         await delay(600);
         send({
           type: "status",
@@ -142,33 +180,58 @@ export async function POST(request: NextRequest) {
           step: 6,
         });
 
-        // Step 2: Call the Gradio analyze function
+        // Step 3: Poll the Gradio 5 event SSE stream for the final result
         let answer: string;
         try {
-          const predictRes = await fetch(`${HF_SPACE_URL}/run/analyze`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              data: [
-                { path: pdfPath, orig_name: pdf.name, size: pdf.size },
-                question,
-              ],
-            }),
-          });
-
-          if (!predictRes.ok) {
-            throw new Error(
-              `Analysis backend returned status ${predictRes.status}.`
-            );
+          const pollRes = await fetch(
+            `${HF_SPACE_URL}/gradio_api/call/analyze/${eventId}`
+          );
+          if (!pollRes.ok || !pollRes.body) {
+            throw new Error(`Poll failed with status ${pollRes.status}.`);
           }
 
-          const result = await predictRes.json();
-          answer = result?.data?.[0] ?? "No answer was returned from the backend.";
+          const reader = pollRes.body.getReader();
+          const textDecoder = new TextDecoder();
+          let buffer = "";
+          let lastEvent = "";
+          answer = "";
+
+          outer: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += textDecoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                lastEvent = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                const rawData = line.slice(6).trim();
+                if (lastEvent === "complete") {
+                  const parsed = JSON.parse(rawData);
+                  answer = Array.isArray(parsed) ? parsed[0] : String(parsed);
+                  break outer;
+                } else if (lastEvent === "error") {
+                  throw new Error(
+                    rawData !== "null"
+                      ? `Backend error: ${rawData}`
+                      : "An error occurred in the analysis pipeline."
+                  );
+                }
+              }
+            }
+          }
+
+          if (!answer) {
+            answer = "No answer was returned from the backend.";
+          }
         } catch (err) {
           send({
             type: "error",
             message:
-              err instanceof Error ? err.message : "Analysis request failed.",
+              err instanceof Error ? err.message : "Analysis polling failed.",
           });
           controller.close();
           return;
