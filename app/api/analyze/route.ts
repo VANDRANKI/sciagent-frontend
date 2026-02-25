@@ -3,15 +3,15 @@ import { NextRequest } from "next/server";
 const HF_SPACE_URL = process.env.HF_SPACE_URL;
 
 /**
- * Proxies the analysis request to the HuggingFace Gradio 5 backend.
+ * Proxies the analysis request to the HuggingFace backend.
  *
- * Gradio 5 API (3 steps):
- * 1. Upload the PDF to /gradio_api/upload
- * 2. Call /gradio_api/call/analyze to get an event_id (returns immediately)
- * 3. Poll /gradio_api/call/analyze/{event_id} for the SSE result stream
+ * The backend exposes a plain FastAPI endpoint at POST /api/analyze that
+ * accepts multipart/form-data (pdf + question) and returns JSON:
+ *   {"answer": "...", "session_id": "..."}  on success
+ *   {"error":  "..."}                        on failure
  *
- * Fake SSE status events are streamed to the frontend during processing
- * so the agent pipeline shows progress.
+ * This route wraps that single request in an SSE stream so the frontend can
+ * show agent-pipeline progress while the backend is processing.
  */
 export async function POST(request: NextRequest) {
   if (!HF_SPACE_URL) {
@@ -54,93 +54,59 @@ export async function POST(request: NextRequest) {
       const delay = (ms: number) =>
         new Promise((resolve) => setTimeout(resolve, ms));
 
+      // Heartbeat to keep the SSE connection alive during long analyses.
+      let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+      const startHeartbeat = () => {
+        heartbeatTimer = setInterval(() => {
+          try {
+            send({ type: "heartbeat" });
+          } catch {
+            /* stream already closed */
+          }
+        }, 15_000);
+      };
+      const stopHeartbeat = () => {
+        if (heartbeatTimer !== null) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
+      };
+
       try {
-        // Step 1: Upload the PDF to Gradio's upload endpoint
+        // Build the multipart payload for /api/analyze
+        const backendForm = new FormData();
+        backendForm.append("pdf", pdf, pdf.name);
+        backendForm.append("question", question);
+
+        // Fire the backend request immediately (do not await yet).
+        // The pipeline can take 60–120 s; we stream fake progress in parallel.
+        const analyzePromise = fetch(`${HF_SPACE_URL}/api/analyze`, {
+          method: "POST",
+          body: backendForm,
+          // 5-minute hard timeout — enough for the full 6-agent pipeline.
+          signal: AbortSignal.timeout(300_000),
+        });
+
+        // ----------------------------------------------------------------
+        // Stream fake progress events while the backend processes the paper.
+        // ----------------------------------------------------------------
         send({
           type: "status",
           agent: "ingestion",
-          message: "Uploading PDF to backend...",
+          message: "Uploading and parsing PDF...",
           step: 1,
         });
 
-        const uploadForm = new FormData();
-        uploadForm.append("files", pdf, pdf.name);
-
-        let uploadedPaths: string[];
-        try {
-          const uploadRes = await fetch(`${HF_SPACE_URL}/gradio_api/upload`, {
-            method: "POST",
-            body: uploadForm,
-          });
-          if (!uploadRes.ok) {
-            throw new Error(
-              `Upload failed with status ${uploadRes.status}. ` +
-                "The Space may be starting up - please wait 1-2 minutes and try again."
-            );
-          }
-          uploadedPaths = await uploadRes.json();
-        } catch (err) {
-          send({
-            type: "error",
-            message:
-              err instanceof Error
-                ? err.message
-                : "Could not reach the backend. The Space may be cold-starting.",
-          });
-          controller.close();
-          return;
-        }
-
-        const pdfPath = uploadedPaths[0];
-
+        await delay(800);
         send({
           type: "status",
           agent: "ingestion",
-          message: "PDF uploaded. Parsing and indexing...",
+          message: "Chunking and indexing with embeddings...",
           step: 1,
           done: false,
         });
 
-        // Step 2: Kick off the Gradio 5 call - returns an event_id immediately
-        let eventId: string;
-        try {
-          const callRes = await fetch(
-            `${HF_SPACE_URL}/gradio_api/call/analyze`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                data: [
-                  { path: pdfPath, orig_name: pdf.name, size: pdf.size },
-                  question,
-                ],
-              }),
-            }
-          );
-
-          if (!callRes.ok) {
-            throw new Error(
-              `Analysis backend returned status ${callRes.status}.`
-            );
-          }
-
-          const callResult = await callRes.json();
-          eventId = callResult.event_id;
-          if (!eventId) {
-            throw new Error("No event_id returned from backend.");
-          }
-        } catch (err) {
-          send({
-            type: "error",
-            message:
-              err instanceof Error ? err.message : "Analysis request failed.",
-          });
-          controller.close();
-          return;
-        }
-
-        // Stream fake status events while the backend processes in the background
-        await delay(600);
+        await delay(700);
         send({
           type: "status",
           agent: "planner",
@@ -148,7 +114,7 @@ export async function POST(request: NextRequest) {
           step: 2,
         });
 
-        await delay(500);
+        await delay(600);
         send({
           type: "status",
           agent: "retriever",
@@ -156,7 +122,7 @@ export async function POST(request: NextRequest) {
           step: 3,
         });
 
-        await delay(500);
+        await delay(600);
         send({
           type: "status",
           agent: "analyzer",
@@ -164,7 +130,7 @@ export async function POST(request: NextRequest) {
           step: 4,
         });
 
-        await delay(500);
+        await delay(600);
         send({
           type: "status",
           agent: "critic",
@@ -172,7 +138,7 @@ export async function POST(request: NextRequest) {
           step: 5,
         });
 
-        await delay(400);
+        await delay(500);
         send({
           type: "status",
           agent: "synthesizer",
@@ -180,72 +146,57 @@ export async function POST(request: NextRequest) {
           step: 6,
         });
 
-        // Step 3: Poll the Gradio 5 event SSE stream for the final result
-        let answer: string;
-        try {
-          const pollRes = await fetch(
-            `${HF_SPACE_URL}/gradio_api/call/analyze/${eventId}`
-          );
-          if (!pollRes.ok || !pollRes.body) {
-            throw new Error(`Poll failed with status ${pollRes.status}.`);
+        // Start heartbeat so the SSE connection stays alive while we wait.
+        startHeartbeat();
+
+        // ----------------------------------------------------------------
+        // Await the backend response.
+        // ----------------------------------------------------------------
+        const res = await analyzePromise;
+        stopHeartbeat();
+
+        if (!res.ok) {
+          let errMsg = `Backend returned status ${res.status}.`;
+          try {
+            const body = await res.json();
+            if (body?.error) errMsg = body.error;
+          } catch {
+            /* ignore parse errors */
           }
+          send({ type: "error", message: errMsg });
+          controller.close();
+          return;
+        }
 
-          const reader = pollRes.body.getReader();
-          const textDecoder = new TextDecoder();
-          let buffer = "";
-          let lastEvent = "";
-          answer = "";
+        const data = await res.json();
 
-          outer: while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        if (data?.error) {
+          send({ type: "error", message: data.error });
+          controller.close();
+          return;
+        }
 
-            buffer += textDecoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-
-            for (const line of lines) {
-              if (line.startsWith("event: ")) {
-                lastEvent = line.slice(7).trim();
-              } else if (line.startsWith("data: ")) {
-                const rawData = line.slice(6).trim();
-                if (lastEvent === "complete") {
-                  const parsed = JSON.parse(rawData);
-                  answer = Array.isArray(parsed) ? parsed[0] : String(parsed);
-                  break outer;
-                } else if (lastEvent === "error") {
-                  throw new Error(
-                    rawData !== "null"
-                      ? `Backend error: ${rawData}`
-                      : "An error occurred in the analysis pipeline."
-                  );
-                }
-              }
-            }
-          }
-
-          if (!answer) {
-            answer = "No answer was returned from the backend.";
-          }
-        } catch (err) {
+        if (!data?.answer) {
           send({
             type: "error",
-            message:
-              err instanceof Error ? err.message : "Analysis polling failed.",
+            message: "No answer was returned from the backend.",
           });
           controller.close();
           return;
         }
 
-        send({
-          type: "answer",
-          content: answer,
-        });
+        send({ type: "answer", content: data.answer });
       } catch (err) {
+        stopHeartbeat();
+        const isTimeout =
+          err instanceof Error && err.name === "TimeoutError";
         send({
           type: "error",
-          message:
-            err instanceof Error ? err.message : "An unexpected error occurred.",
+          message: isTimeout
+            ? "Analysis timed out after 5 minutes. Please try again."
+            : err instanceof Error
+            ? err.message
+            : "An unexpected error occurred.",
         });
       } finally {
         controller.close();
@@ -257,7 +208,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });
