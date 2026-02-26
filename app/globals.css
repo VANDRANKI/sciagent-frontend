@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --scrollbar-track: #12121f;
-  --scrollbar-thumb: #2d2d4e;
-  --scrollbar-thumb-hover: #4a4a7a;
+  --scrollbar-track: #1e293b;
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #4b5563;
 }
 
 * {
@@ -17,15 +17,15 @@ html {
 }
 
 body {
-  background-color: #0a0a14;
-  color: #e2e8f0;
+  background-color: #0f172a;
+  color: #f1f5f9;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar for browsers that support it */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -42,32 +42,39 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Gradient text utility */
+/* Gradient text - indigo-400 to violet-300 for brightness on dark bg */
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c4b5fd 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Subtle grid background for the page */
+/* Subtle grid background */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(129, 140, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(129, 140, 248, 0.06) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* Glow effect on focused inputs */
+/* Focus ring for inputs */
 input:focus,
 textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4);
 }
 
-/* Prevent prose from overriding our citation spans */
+/* Prevent prose from overriding citation spans */
 .prose code:not([class*="language-"]) {
   background: transparent;
   padding: 0;
   font-weight: inherit;
+}
+
+/* Mobile pipeline horizontal scroll helper */
+.pipeline-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }

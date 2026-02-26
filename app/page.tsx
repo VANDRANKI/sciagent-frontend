@@ -42,9 +42,7 @@ export default function Home() {
 
   const setAgentDone = (name: AgentName, message?: string) => {
     setAgentStates((prev) => ({ ...prev, [name]: "done" }));
-    if (message) {
-      setAgentMessages((prev) => ({ ...prev, [name]: message }));
-    }
+    if (message) setAgentMessages((prev) => ({ ...prev, [name]: message }));
   };
 
   const setAgentError = (name: AgentName) => {
@@ -53,7 +51,6 @@ export default function Home() {
 
   const handleAnalyze = async () => {
     if (!file || !question.trim() || isLoading) return;
-
     resetState();
     setIsLoading(true);
 
@@ -62,20 +59,17 @@ export default function Home() {
         if (event.type === "status" && event.agent) {
           const agentName = event.agent as AgentName;
           const msg = event.message ?? "";
-
           if (event.done) {
             setAgentDone(agentName, msg);
           } else {
             setAgentActive(agentName, msg);
           }
         } else if (event.type === "answer") {
-          // Mark all remaining active agents as done
           setAgentStates((prev) => {
             const next = { ...prev };
             AGENTS.forEach((a) => {
               if (next[a.name] === "active") next[a.name] = "done";
             });
-            // Mark synthesizer as done (it just finished)
             next["synthesizer"] = "done";
             return next;
           });
@@ -84,7 +78,6 @@ export default function Home() {
           if (event.session_id) setSessionId(event.session_id);
         } else if (event.type === "error") {
           setErrorMessage(event.message ?? "An unexpected error occurred.");
-          // Mark any active agent as errored
           setAgentStates((prev) => {
             const next = { ...prev };
             AGENTS.forEach((a) => {
@@ -116,32 +109,40 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-base grid-bg">
+
       {/* Header */}
-      <header className="border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-border bg-card/70 backdrop-blur-sm sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold gradient-text tracking-tight">SciAgent</h1>
+            <h1 className="text-lg sm:text-xl font-bold gradient-text tracking-tight">
+              SciAgent
+            </h1>
             <p className="text-xs text-text-muted mt-0.5">
               Multi-Agent Research Paper Analyzer
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-block text-xs text-text-muted px-2.5 py-1 rounded-full border border-border bg-card">
+            <span className="hidden sm:inline-block text-xs text-text-secondary px-2.5 py-1 rounded-full border border-border bg-card">
               Agentic RAG
             </span>
-            <span className="hidden sm:inline-block text-xs text-text-muted px-2.5 py-1 rounded-full border border-border bg-card">
+            <span className="hidden sm:inline-block text-xs text-text-secondary px-2.5 py-1 rounded-full border border-border bg-card">
               6 Agents
             </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      {/*
+        3-item grid for correct mobile ordering:
+          Desktop: 2-col left (input + how-it-works), 3-col right (output spanning both rows)
+          Mobile:  input first -> output second -> how-it-works last
+      */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:items-start">
 
-          {/* Left panel: input */}
-          <div className="lg:col-span-2 flex flex-col gap-4">
-            <div className="bg-card rounded-2xl border border-border p-5 shadow-card flex flex-col gap-5">
+          {/* 1 - Input form */}
+          <div className="lg:col-span-2 lg:row-start-1 order-1 flex flex-col gap-4">
+            <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card flex flex-col gap-4 sm:gap-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-widest text-text-muted mb-2">
                   Research Paper
@@ -166,7 +167,7 @@ export default function Home() {
                   placeholder="What methodology did the authors use to evaluate their model?"
                   className="w-full resize-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-text-primary placeholder-text-muted transition-all duration-150 focus:border-accent-primary focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-xs text-text-muted mt-1">Ctrl+Enter to submit</p>
+                <p className="text-xs text-text-muted mt-1.5">Ctrl+Enter to submit</p>
               </div>
 
               <button
@@ -183,34 +184,13 @@ export default function Home() {
                 {isLoading ? "Analyzing..." : "Analyze Paper"}
               </button>
             </div>
-
-            {/* How it works */}
-            <div className="bg-card rounded-2xl border border-border p-5 shadow-card">
-              <p className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-3">
-                How It Works
-              </p>
-              <ol className="flex flex-col gap-2">
-                {AGENTS.map((agent) => (
-                  <li key={agent.name} className="flex items-start gap-2.5">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-primary/15 text-accent-glow text-xs flex items-center justify-center font-semibold mt-0.5">
-                      {agent.step}
-                    </span>
-                    <div>
-                      <span className="text-xs font-medium text-text-primary">{agent.label}</span>
-                      <p className="text-xs text-text-muted leading-snug">{agent.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
           </div>
 
-          {/* Right panel: pipeline + answer */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
+          {/* 2 - Pipeline + Answer (spans both grid rows on desktop) */}
+          <div className="lg:col-span-3 lg:row-start-1 lg:row-span-2 lg:col-start-3 order-2 flex flex-col gap-4">
 
-            {/* Agent pipeline visualization */}
             {showPipeline && (
-              <div className="bg-card rounded-2xl border border-border p-5 shadow-card">
+              <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card">
                 <AgentPipeline
                   agentStates={agentStates}
                   agentMessages={agentMessages}
@@ -223,7 +203,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Error message */}
             {errorMessage && (
               <div className="bg-error-bg border border-error rounded-2xl p-4 animate-fade-in">
                 <p className="text-sm font-semibold text-error mb-1">Analysis failed</p>
@@ -234,8 +213,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Answer output */}
-            <div className="bg-card rounded-2xl border border-border p-5 shadow-card flex-1 min-h-[300px]">
+            <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card flex-1 min-h-[260px] sm:min-h-[320px]">
               {isLoading && !answer && (
                 <div className="flex flex-col items-center justify-center h-48 gap-3">
                   <div className="flex gap-1.5">
@@ -243,10 +221,7 @@ export default function Home() {
                       <div
                         key={i}
                         className="w-2 h-2 rounded-full bg-accent-primary animate-bounce"
-                        style={{
-                          animationDelay: `${i * 0.12}s`,
-                          animationDuration: "0.9s",
-                        }}
+                        style={{ animationDelay: `${i * 0.12}s`, animationDuration: "0.9s" }}
                       />
                     ))}
                   </div>
@@ -256,20 +231,41 @@ export default function Home() {
               <ChatDisplay answer={answer} />
             </div>
 
-            {/* Session info */}
             {sessionId && (
               <p className="text-xs text-text-muted text-right animate-fade-in">
                 Session: {sessionId}
               </p>
             )}
           </div>
+
+          {/* 3 - How It Works (last on mobile, bottom-left on desktop) */}
+          <div className="lg:col-span-2 lg:row-start-2 order-3">
+            <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card">
+              <p className="text-xs font-semibold uppercase tracking-widest text-text-muted mb-3">
+                How It Works
+              </p>
+              <ol className="flex flex-col gap-2.5">
+                {AGENTS.map((agent) => (
+                  <li key={agent.name} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-muted border border-accent-primary/30 text-accent-glow text-xs flex items-center justify-center font-bold mt-0.5">
+                      {agent.step}
+                    </span>
+                    <div>
+                      <span className="text-sm font-medium text-text-primary">{agent.label}</span>
+                      <p className="text-xs text-text-muted leading-snug mt-0.5">{agent.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-16 py-6">
+      <footer className="border-t border-border mt-12 sm:mt-16 py-5 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <p className="text-xs text-text-muted text-center">
+          <p className="text-xs text-text-muted text-center leading-relaxed">
             SciAgent uses smolagents, ChromaDB, and HuggingFace Inference to analyze research papers.
             All processing is grounded exclusively in the uploaded paper.
           </p>

@@ -23,8 +23,8 @@ export default function ChatDisplay({ answer }: ChatDisplayProps) {
 
   if (!answer) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-text-muted text-sm gap-3">
-        <div className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center h-56 text-text-muted text-sm gap-3">
+        <div className="w-12 h-12 rounded-full bg-card-hover border border-border flex items-center justify-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="w-6 h-6 text-text-muted"
@@ -40,7 +40,7 @@ export default function ChatDisplay({ answer }: ChatDisplayProps) {
             />
           </svg>
         </div>
-        <p className="text-center max-w-xs leading-relaxed">
+        <p className="text-center max-w-xs leading-relaxed text-text-secondary">
           Upload a PDF and ask a question. The analysis will appear here with inline citations.
         </p>
       </div>
@@ -51,34 +51,40 @@ export default function ChatDisplay({ answer }: ChatDisplayProps) {
     <div className="relative animate-slide-up">
       <button
         onClick={handleCopy}
-        className="absolute top-3 right-3 z-10 text-xs px-3 py-1.5 rounded-lg bg-card border border-border text-text-secondary hover:text-text-primary hover:border-border-bright transition-all duration-150"
+        className="absolute top-0 right-0 z-10 text-xs px-3 py-1.5 rounded-lg bg-card-hover border border-border text-text-secondary hover:text-text-primary hover:border-border-bright transition-all duration-150"
       >
         {copied ? "Copied" : "Copy"}
       </button>
 
-      <div className="prose prose-invert prose-sm max-w-none pr-20">
+      <div className="prose prose-invert prose-sm max-w-none pr-16 sm:pr-20">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
             h2: ({ children }) => (
-              <h2 className="text-base font-semibold text-text-primary border-b border-border pb-1 mt-5 mb-3">
+              <h2 className="text-base font-semibold text-text-primary border-b border-border pb-1.5 mt-5 mb-3">
                 {children}
               </h2>
             ),
             h3: ({ children }) => (
-              <h3 className="text-sm font-semibold text-accent-glow mt-4 mb-2">{children}</h3>
+              <h3 className="text-sm font-semibold text-accent-secondary mt-4 mb-2">
+                {children}
+              </h3>
             ),
             p: ({ children }) => (
               <p className="text-sm leading-relaxed text-text-primary mb-3">{children}</p>
             ),
             ul: ({ children }) => (
-              <ul className="text-sm text-text-primary space-y-1 mb-3 pl-4 list-disc">{children}</ul>
+              <ul className="text-sm text-text-primary space-y-1 mb-3 pl-4 list-disc">
+                {children}
+              </ul>
             ),
             ol: ({ children }) => (
-              <ol className="text-sm text-text-primary space-y-1 mb-3 pl-4 list-decimal">{children}</ol>
+              <ol className="text-sm text-text-primary space-y-1 mb-3 pl-4 list-decimal">
+                {children}
+              </ol>
             ),
             li: ({ children }) => (
-              <li className="leading-relaxed">{children}</li>
+              <li className="leading-relaxed text-text-secondary">{children}</li>
             ),
             strong: ({ children }) => (
               <strong className="font-semibold text-text-primary">{children}</strong>
@@ -87,41 +93,47 @@ export default function ChatDisplay({ answer }: ChatDisplayProps) {
               const isBlock = className?.includes("language-");
               if (isBlock) {
                 return (
-                  <code className="block bg-card border border-border rounded-lg p-3 text-xs font-mono text-accent-glow overflow-x-auto">
+                  <code className="block bg-base border border-border rounded-lg p-3 text-xs font-mono text-accent-glow overflow-x-auto">
                     {children}
                   </code>
                 );
               }
-              // Inline citation highlight: [Chunk N, Page P]
               const text = String(children);
+              // Citation highlight: [Chunk N, Page P]
               if (/^\[Chunk \d+/.test(text)) {
                 return (
-                  <span className="inline-block px-1.5 py-0.5 rounded bg-accent-primary/20 text-accent-glow text-xs font-mono border border-accent-primary/30">
+                  <span className="inline-block px-1.5 py-0.5 rounded-md bg-accent-muted text-accent-glow text-xs font-mono border border-accent-primary/40 whitespace-nowrap">
                     {text}
                   </span>
                 );
               }
               return (
-                <code className="px-1.5 py-0.5 rounded bg-card border border-border text-xs font-mono text-accent-glow">
+                <code className="px-1.5 py-0.5 rounded bg-card-hover border border-border text-xs font-mono text-accent-glow">
                   {children}
                 </code>
               );
             },
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-accent-primary/50 pl-4 italic text-text-secondary my-3">
+              <blockquote className="border-l-4 border-accent-primary/60 pl-4 italic text-text-secondary my-3 bg-accent-muted/30 py-2 rounded-r-lg">
                 {children}
               </blockquote>
             ),
             table: ({ children }) => (
               <div className="overflow-x-auto my-3">
-                <table className="text-xs text-text-primary border-collapse w-full">{children}</table>
+                <table className="text-xs text-text-primary border-collapse w-full">
+                  {children}
+                </table>
               </div>
             ),
             th: ({ children }) => (
-              <th className="border border-border px-3 py-2 bg-card font-semibold text-left">{children}</th>
+              <th className="border border-border px-3 py-2 bg-card-hover font-semibold text-left text-text-primary">
+                {children}
+              </th>
             ),
             td: ({ children }) => (
-              <td className="border border-border px-3 py-1.5">{children}</td>
+              <td className="border border-border px-3 py-1.5 text-text-secondary">
+                {children}
+              </td>
             ),
           }}
         >
