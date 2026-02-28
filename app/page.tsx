@@ -178,7 +178,7 @@ export default function Home() {
                   "w-full py-3 px-6 rounded-xl text-sm font-semibold transition-all duration-200",
                   "focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-base",
                   canSubmit
-                    ? "bg-accent-primary hover:bg-accent-hover text-white shadow-accent-glow hover:shadow-lg active:scale-[0.98]"
+                    ? "bg-accent-primary hover:bg-accent-hover text-white active:scale-[0.98]"
                     : "bg-card border border-border text-text-muted cursor-not-allowed",
                 ].join(" ")}
               >
