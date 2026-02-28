@@ -5,6 +5,7 @@ import FileUpload from "@/components/FileUpload";
 import AgentPipeline from "@/components/AgentPipeline";
 import ChatDisplay from "@/components/ChatDisplay";
 import LoadingSteps from "@/components/LoadingSteps";
+import CavemanLoader from "@/components/CavemanLoader";
 import { analyzeStream } from "@/lib/api";
 import { AGENTS, AgentStates, AgentName } from "@/lib/types";
 
@@ -215,7 +216,7 @@ export default function Home() {
 
             <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 shadow-card flex-1 min-h-[260px] sm:min-h-[320px]">
               {isLoading && !answer && (
-                <div className="flex flex-col items-center justify-center h-48 gap-3">
+                <div className="flex flex-col items-center justify-center min-h-[320px] gap-3 py-4">
                   <div className="flex gap-1.5">
                     {[0, 1, 2, 3].map((i) => (
                       <div
@@ -226,6 +227,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-sm text-text-muted">Agents are working on your question...</p>
+                  <CavemanLoader isActive={isLoading && !answer} />
                 </div>
               )}
               <ChatDisplay answer={answer} />

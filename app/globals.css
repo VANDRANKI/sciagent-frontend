@@ -78,3 +78,103 @@ textarea:focus {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
+
+/* ============================================================
+   Caveman Loader - animated waiting character
+   ============================================================ */
+
+.cm-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  user-select: none;
+}
+
+.cm-svg {
+  filter: drop-shadow(0 6px 18px rgba(99, 102, 241, 0.18));
+  will-change: transform;
+}
+
+/* Mood label */
+.cm-mood-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  font-style: italic;
+  animation: cm-fade-cycle 3s ease-in-out infinite;
+}
+
+/* --- Mood animations --- */
+
+/* curious: gentle float up and down */
+@keyframes cm-bob {
+  0%, 100% { transform: translateY(0px);  }
+  50%       { transform: translateY(-10px); }
+}
+
+/* working: side tilt like concentrating */
+@keyframes cm-tilt {
+  0%, 100% { transform: rotate(0deg)   translateY(0px); }
+  25%       { transform: rotate(-3deg)  translateY(-4px); }
+  75%       { transform: rotate(3deg)   translateY(-4px); }
+}
+
+/* stressed: rapid nervous tremor */
+@keyframes cm-shake {
+  0%, 100% { transform: translateX(0px); }
+  10%       { transform: translateX(-4px) rotate(-1.5deg); }
+  20%       { transform: translateX(4px)  rotate(1.5deg); }
+  30%       { transform: translateX(-4px); }
+  40%       { transform: translateX(4px); }
+  50%       { transform: translateX(-3px) rotate(-1deg); }
+  60%       { transform: translateX(3px)  rotate(1deg); }
+  70%       { transform: translateX(-2px); }
+  80%       { transform: translateX(2px); }
+  90%       { transform: translateX(-1px); }
+}
+
+/* exhausted: heavy slow sway, sinking lower */
+@keyframes cm-slump {
+  0%, 100% { transform: translateY(0px)  rotate(0deg); }
+  33%       { transform: translateY(5px)  rotate(1.8deg); }
+  66%       { transform: translateY(3px)  rotate(-1.2deg); }
+}
+
+/* sweat drop dripping */
+@keyframes cm-sweat-drip {
+  0%   { opacity: 1;   transform: translateY(0px); }
+  70%  { opacity: 0.8; transform: translateY(14px); }
+  100% { opacity: 0;   transform: translateY(20px); }
+}
+
+/* rope gentle sway */
+@keyframes cm-rope-sway {
+  0%, 100% { transform: rotate(0deg);  }
+  33%       { transform: rotate(6deg);  }
+  66%       { transform: rotate(-5deg); }
+}
+
+/* mood label subtle pulse */
+@keyframes cm-fade-cycle {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 0.9; }
+}
+
+/* apply classes */
+.cm-idle  { animation: cm-bob   2.6s ease-in-out infinite; }
+.cm-tilt  { animation: cm-tilt  1.9s ease-in-out infinite; }
+.cm-shake { animation: cm-shake 0.48s linear     infinite; }
+.cm-slump { animation: cm-slump 3.4s ease-in-out infinite; }
+
+.cm-sweat {
+  animation: cm-sweat-drip 1.4s ease-in infinite;
+  transform-origin: center top;
+}
+
+.cm-rope {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: cm-rope-sway 2.4s ease-in-out infinite;
+}
