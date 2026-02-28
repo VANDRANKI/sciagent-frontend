@@ -1,6 +1,6 @@
-# SciAgent Frontend
+# SciAgent
 
-Next.js frontend for SciAgent, a research paper question-answering system powered by a multi-agent AI pipeline.
+SciAgent, a research paper question-answering system powered by a multi-agent AI pipeline.
 
 ---
 
@@ -10,33 +10,24 @@ Upload a research paper (PDF) and ask any question about it. Six AI agents work 
 
 ---
 
-## Tech Stack
-
-- Next.js 15 (App Router)
-- TypeScript
-- Tailwind CSS
-- Deployed on Vercel
-
----
-
 ## Project Structure
 
 ```
 sciagent-frontend/
     app/
-        page.tsx              Main page with upload, question input, and answer display
-        layout.tsx            Root layout and metadata
-        globals.css           Base styles, animations, and scrollbar
-        api/analyze/route.ts  API proxy to the HuggingFace Space backend
+        page.tsx              
+        layout.tsx            
+        globals.css           
+        api/analyze/route.ts  
     components/
-        FileUpload.tsx         Drag-and-drop PDF upload component
-        AgentPipeline.tsx      Visual pipeline showing each agent's live status
-        ChatDisplay.tsx        Markdown renderer with citation highlighting
-        CavemanLoader.tsx      Animated character shown while agents are running
-        LoadingSteps.tsx       Animated loading messages
+        FileUpload.tsx        
+        AgentPipeline.tsx      
+        ChatDisplay.tsx       
+        CavemanLoader.tsx     
+        LoadingSteps.tsx      
     lib/
-        types.ts              Shared types (AgentName, AgentStatus, StreamEvent)
-        api.ts                analyzeStream() async generator for SSE consumption
+        types.ts             
+        api.ts        
 ```
 
 ---
@@ -81,21 +72,6 @@ Open `http://localhost:3000` in your browser.
 6. The final answer is rendered with Markdown and inline citations.
 
 ---
-
-## Backend
-
-The backend is a separate Python service deployed on HuggingFace Spaces.
-Source: [https://huggingface.co/spaces/PrabhuV/sciagent](../hf-space-clone)
-
----
-
-## Deployment
-
-Deployed to Vercel using the CLI:
-
-```bash
-vercel --prod
-```
 
 Set the following environment variable in your Vercel project settings:
 
