@@ -64,17 +64,16 @@ Open `http://localhost:3000` in your browser.
 
 ## How It Works
 
-1. User uploads a PDF and types a question.
-2. The frontend POSTs both to the Next.js API route (`/api/analyze`).
-3. The API route forwards the request to the HuggingFace Space backend.
-4. The backend runs six agents (Ingestion, Retriever, Analyzer, Critic, Gap Filler, Synthesizer).
-5. The frontend streams fake SSE progress events while waiting for the backend response.
-6. The final answer is rendered with Markdown and inline citations.
+```mermaid
+flowchart TD
+    A([User uploads PDF and types a question])
 
----
+    A --> B[1. Ingestion - parse, chunk, embed, store]
+    B --> C[2. Planner - orchestrate the full pipeline]
+    C --> D[3. Retriever - hybrid BM25 and vector search]
+    D --> E[4. Analyzer - structured analysis of chunks]
+    E --> F[5. Critic - fact-check against source]
+    F --> G[6. Synthesizer - build final cited answer]
 
-Set the following environment variable in your Vercel project settings:
-
-```
-HF_SPACE_URL=https://your-hf-space.hf.space
+    G --> H([User reads the answer with inline citations])
 ```
