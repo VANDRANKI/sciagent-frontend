@@ -85,7 +85,7 @@ Open `http://localhost:3000` in your browser.
 ## Backend
 
 The backend is a separate Python service deployed on HuggingFace Spaces.
-Source: [SCI_Agent/hf-space-clone](../hf-space-clone)
+Source: [https://huggingface.co/spaces/PrabhuV/sciagent](../hf-space-clone)
 
 ---
 
