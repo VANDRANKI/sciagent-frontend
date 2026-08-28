@@ -185,7 +185,11 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        send({ type: "answer", content: data.answer });
+        send({
+          type: "answer",
+          content: data.answer,
+          session_id: data.session_id,
+        });
       } catch (err) {
         stopHeartbeat();
         const isTimeout =
