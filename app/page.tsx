@@ -63,6 +63,20 @@ export default function Home() {
           if (event.done) {
             setAgentDone(agentName, msg);
           } else {
+            // The backend streams one agent's status at a time, in pipeline
+            // order. Any other agent still marked "active" from a previous
+            // status event has therefore finished its step - flip it to
+            // "done" before activating the new one, so the pipeline shows
+            // sequential progress instead of every stage lighting up at once.
+            setAgentStates((prev) => {
+              const next = { ...prev };
+              AGENTS.forEach((a) => {
+                if (a.name !== agentName && next[a.name] === "active") {
+                  next[a.name] = "done";
+                }
+              });
+              return next;
+            });
             setAgentActive(agentName, msg);
           }
         } else if (event.type === "answer") {
