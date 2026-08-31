@@ -164,7 +164,6 @@ export async function POST(request: NextRequest) {
             /* ignore parse errors */
           }
           send({ type: "error", message: errMsg });
-          controller.close();
           return;
         }
 
@@ -172,7 +171,6 @@ export async function POST(request: NextRequest) {
 
         if (data?.error) {
           send({ type: "error", message: data.error });
-          controller.close();
           return;
         }
 
@@ -181,7 +179,6 @@ export async function POST(request: NextRequest) {
             type: "error",
             message: "No answer was returned from the backend.",
           });
-          controller.close();
           return;
         }
 
@@ -203,6 +200,15 @@ export async function POST(request: NextRequest) {
             : "An unexpected error occurred.",
         });
       } finally {
+        // Every path above (the three early returns, the success send, and
+        // the catch block) reaches this finally, so this is the only close()
+        // call needed. The early-return branches used to also call
+        // controller.close() themselves before returning, which meant the
+        // controller got closed twice on the backend-error, backend-error-body
+        // and no-answer paths -- close() on an already-closed
+        // ReadableStreamDefaultController throws, turning an ordinary
+        // handled-error response into an unhandled rejection in this stream's
+        // start() callback.
         controller.close();
       }
     },
