@@ -15,7 +15,16 @@ export default function FileUpload({ onFileSelect, disabled = false }: FileUploa
   const handleFile = useCallback(
     (file: File | null) => {
       if (!file) return;
-      if (file.type !== "application/pdf") {
+      // file.type is not reliable on its own: some OS/browser combinations
+      // (notably drag-and-drop on Linux without a registered PDF handler)
+      // report an empty string instead of "application/pdf" for a genuine
+      // PDF, which rejected valid files with "Only PDF files are accepted."
+      // Falling back to the .pdf extension when the browser gives no MIME
+      // type at all still rejects anything with a real, wrong MIME type.
+      const looksLikePdf =
+        file.type === "application/pdf" ||
+        (file.type === "" && file.name.toLowerCase().endsWith(".pdf"));
+      if (!looksLikePdf) {
         alert("Only PDF files are accepted.");
         return;
       }
