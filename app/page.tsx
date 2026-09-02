@@ -46,10 +46,6 @@ export default function Home() {
     if (message) setAgentMessages((prev) => ({ ...prev, [name]: message }));
   };
 
-  const setAgentError = (name: AgentName) => {
-    setAgentStates((prev) => ({ ...prev, [name]: "error" }));
-  };
-
   const handleAnalyze = async () => {
     if (!file || !question.trim() || isLoading) return;
     resetState();
