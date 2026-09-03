@@ -1,5 +1,7 @@
 # SciAgent
 
+[![Build and lint](https://github.com/VANDRANKI/sciagent-frontend/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/VANDRANKI/sciagent-frontend/actions/workflows/build.yml)
+
 SciAgent, a research paper question-answering system powered by a multi-agent AI pipeline.
 
 ---
