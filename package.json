@@ -1,6 +1,7 @@
 {
   "name": "sciagent-frontend",
   "version": "1.0.0",
+  "description": "Frontend for SciAgent, a research paper question-answering system: upload a PDF, ask a question, and get a cited answer from a multi-agent retrieval and analysis pipeline.",
   "private": true,
   "scripts": {
     "dev": "next dev",
