@@ -51,6 +51,12 @@ export default function Home() {
     resetState();
     setIsLoading(true);
 
+    // Set once the stream delivers a terminal event (answer or error). If the
+    // stream ends without one - a dropped connection or a host that cut the
+    // function off - the UI would otherwise stop loading with no answer, no
+    // error and the active agent still highlighted.
+    let finished = false;
+
     try {
       for await (const event of analyzeStream(file, question.trim())) {
         if (event.type === "status" && event.agent) {
@@ -84,10 +90,12 @@ export default function Home() {
             next["synthesizer"] = "done";
             return next;
           });
+          finished = true;
           setCurrentStatusMsg("");
           setAnswer(event.content ?? "");
           if (event.session_id) setSessionId(event.session_id);
         } else if (event.type === "error") {
+          finished = true;
           setErrorMessage(event.message ?? "An unexpected error occurred.");
           setAgentStates((prev) => {
             const next = { ...prev };
@@ -98,6 +106,19 @@ export default function Home() {
           });
           break;
         }
+      }
+
+      if (!finished) {
+        setErrorMessage(
+          "The connection closed before an answer arrived. Please try again."
+        );
+        setAgentStates((prev) => {
+          const next = { ...prev };
+          AGENTS.forEach((a) => {
+            if (next[a.name] === "active") next[a.name] = "error";
+          });
+          return next;
+        });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Network error. Check your connection.";
